@@ -40,9 +40,12 @@ $runspaces = @()
 for ($i = 1; $i -le $Count; $i++) {
     $runspace = [powershell]::Create().AddScript($scriptBlock).AddArgument($Url)
     $runspace.RunspacePool = $runspacePool
+    $handle = $runspace.BeginInvoke()
+
     $runspaces += [PSCustomObject]@{
         Runspace = $runspace
-        Handle = $runspace.BeginInvoke()
+        Handle = $handle
+        Result = $null
     }
 }
 
@@ -51,13 +54,20 @@ $runspaces | ForEach-Object {
     $_.Runspace.EndInvoke($_.Handle)
 }
 
-# Retrieve and output the results
+# Retrieve and store the results
 $runspaces | ForEach-Object {
-    $result = $_.Runspace.EndInvoke($_.Handle)
-    Write-Output "Request: StatusCode = $($result.StatusCode), ResponseTime = $($result.ResponseTime) ms, ErrorMessage = $($result.ErrorMessage)"
+    $_.Result = $_.Runspace.EndInvoke($_.Handle)
     $_.Runspace.Dispose()
 }
 
 # Close the runspace pool
 $runspacePool.Close()
 $runspacePool.Dispose()
+
+# Output the results
+$results = $runspaces | ForEach-Object {
+    $_.Result
+}
+$results | ForEach-Object {
+    Write-Output "Request: StatusCode = $($_.StatusCode), ResponseTime = $($_.ResponseTime) ms, ErrorMessage = $($_.ErrorMessage)"
+}
