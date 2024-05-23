@@ -6,9 +6,12 @@ param (
     [int]$Count
 )
 
+# Create an ArrayList to store job results
+$results = New-Object System.Collections.ArrayList
+
 # Start parallel jobs
 for ($i = 1; $i -le $Count; $i++) {
-    $results += Start-Job -ScriptBlock {
+    $job = Start-Job -ScriptBlock {
         param($Url)
 
         try {
@@ -28,6 +31,8 @@ for ($i = 1; $i -le $Count; $i++) {
             ErrorMessage = $errorMessage
         }
     } -ArgumentList $Url
+
+    $results.Add($job) | Out-Null
 }
 
 # Wait for all jobs to complete
